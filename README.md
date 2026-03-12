@@ -105,13 +105,11 @@ All config fields are optional. Calling `setup()` with no arguments is valid.
 
 ## Installation
 
-The plugin lives inside your Neovim config directory as a lazy.nvim local
-plugin. Add the following spec to `lua/plugins/markdone.lua`:
+### lazy.nvim
 
 ```lua
 return {
-    dir    = vim.fn.stdpath("config"),
-    name   = "markdone.nvim",
+    "olo42/markdone.nvim",
     lazy   = false,
     config = function()
         require("markdone").setup({
@@ -120,6 +118,25 @@ return {
         })
     end,
 }
+```
+
+### packer.nvim
+
+```lua
+use {
+    "olo42/markdone.nvim",
+    config = function()
+        require("markdone").setup()
+    end,
+}
+```
+
+### vim-plug
+
+```vim
+Plug 'olo42/markdone.nvim'
+" then in your init.vim / init.lua:
+" lua require("markdone").setup()
 ```
 
 ## Highlight groups

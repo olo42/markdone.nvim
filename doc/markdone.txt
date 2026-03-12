@@ -1,0 +1,187 @@
+*markdone.txt*  Markdown todo management for Neovim          *markdone.nvim*
+
+Author:   olo42
+License:  MIT
+Homepage: https://github.com/olo42/markdone.nvim
+
+==============================================================================
+CONTENTS                                                   *markdone-contents*
+
+  1. Introduction .............. |markdone-intro|
+  2. Requirements .............. |markdone-requirements|
+  3. Task format ............... |markdone-format|
+  4. Commands .................. |markdone-commands|
+     4.1 Subcommands ........... |markdone-subcommands|
+     4.2 Sort tokens ........... |markdone-sort|
+     4.3 Filter tokens ......... |markdone-filter|
+     4.4 Display tokens ........ |markdone-display|
+  5. Configuration ............. |markdone-config|
+  6. Highlight groups .......... |markdone-highlights|
+  7. Keymaps ................... |markdone-keymaps|
+
+==============================================================================
+1. INTRODUCTION                                               *markdone-intro*
+
+markdone.nvim is a Neovim plugin for managing markdown-based todo lists.
+It searches `.md` files recursively from the current working directory for
+task checkboxes, supports priority, tags, responsibles and due dates, and
+shows results in either the quickfix list or a Snacks picker.
+
+==============================================================================
+2. REQUIREMENTS                                        *markdone-requirements*
+
+- Neovim 0.10+
+- ripgrep (`rg`) available on `$PATH`
+- snacks.nvim (optional — required only for the `picker` display mode)
+
+==============================================================================
+3. TASK FORMAT                                               *markdone-format*
+
+Tasks are standard markdown checkboxes. All metadata fields are optional and
+can appear in any order after the priority marker.
+>
+  - [ ] (A) Buy milk +groceries ~2026-03-15 @olli
+  - [x] (B) Write report +work ~2026-03-12 @anna
+  - [ ] Fix the bug +work @olli
+  - [ ] (D) Low priority task
+<
+
+FIELD       SYNTAX          EXAMPLE        NOTES ~
+Checkbox    `- [ ]`/`- [x]`  `- [ ]`        `*` and `+` list markers also work
+Priority    `(A)`–`(D)`      `(B)`          Directly after checkbox. Omitted = C
+Tag         `+name`          `+work`        Multiple allowed. Case-insensitive.
+Responsible `@name`          `@olli`        Multiple allowed. Must be preceded by
+                                           a space — email addresses are skipped.
+                                           Case-insensitive.
+Due date    `~YYYY-MM-DD`    `~2026-03-15`  ISO 8601 date
+
+==============================================================================
+4. COMMANDS                                                *markdone-commands*
+
+                                                                       *:Todo*
+`:Todo` searches `.md` files recursively from the current working directory
+(ignoring `node_modules/` and `.git/`).
+>
+  :Todo <subcommand> [tokens...]
+<
+Tab-completion is available for the subcommand.
+
+------------------------------------------------------------------------------
+4.1 SUBCOMMANDS                                         *markdone-subcommands*
+
+  all    Search all checkboxes (open and done)
+  open   Search open checkboxes `[ ]` only
+  done   Search done checkboxes `[x]` / `[X]` only
+
+The subcommand can be omitted when `default_filter` is set in the config
+(see |markdone-config|).
+
+------------------------------------------------------------------------------
+4.2 SORT TOKENS                                               *markdone-sort*
+
+  sort:prio       Sort by priority A → B → C → D.
+                  Items without a priority marker sort as C.
+  sort:due        Sort by due date, oldest first.
+                  Items without a due date sort last.
+  sort:prio+due   Sort by priority, then by due date as a tiebreaker
+                  within the same priority.
+
+A default sort can be set via `default_sort` (see |markdone-config|).
+An explicit `sort:` token always overrides the default.
+
+------------------------------------------------------------------------------
+4.3 FILTER TOKENS                                           *markdone-filter*
+
+All active filters are AND-combined.
+
+  tag:<name>        Keep items that have `+<name>` (case-insensitive)
+  resp:<name>       Keep items that have `@<name>` (case-insensitive)
+  due:today         Due date == today
+  due:tomorrow      Due date == tomorrow
+  due:overdue       Due date is strictly before today
+  due:week          Due date is within the next 7 days (inclusive)
+  due:YYYY-MM-DD    Exact date match
+
+------------------------------------------------------------------------------
+4.4 DISPLAY TOKENS                                         *markdone-display*
+
+  (none)    Results go to the quickfix list (`:copen`)
+  picker    Results open in a Snacks picker with file preview
+
+------------------------------------------------------------------------------
+EXAMPLES                                                  *markdone-examples*
+>
+  :Todo open sort:prio tag:work resp:olli due:overdue
+  :Todo all picker sort:prio+due
+  :Todo done picker tag:work
+  :Todo due:today          " requires default_filter to be set
+<
+
+==============================================================================
+5. CONFIGURATION                                             *markdone-config*
+
+Pass a config table to `setup()`. All fields are optional; calling `setup()`
+with no arguments is valid.
+>lua
+  require("markdone").setup({
+      -- Make :Todo with no subcommand default to open tasks.
+      default_filter = "open",   -- "open" | "all" | "done"
+
+      -- Always sort by priority unless an explicit sort: token is given.
+      default_sort = "prio",     -- "prio" | "due" | "prio+due"
+  })
+<
+
+OPTIONS                                                     *markdone-options*
+
+default_filter ~
+  Type: `string` | Default: `nil`
+  When set, `:Todo` with no subcommand uses this filter instead of showing
+  an error. Accepted values: `"open"`, `"all"`, `"done"`.
+
+default_sort ~
+  Type: `string` | Default: `nil`
+  When set, this sort is applied automatically unless an explicit `sort:`
+  token is given in the command. Accepted values: `"prio"`, `"due"`,
+  `"prio+due"`.
+
+==============================================================================
+6. HIGHLIGHT GROUPS                                       *markdone-highlights*
+
+All groups are defined with `default = true` so any colorscheme can override
+them freely.
+
+  GROUP                 DEFAULT LINK       USED FOR ~
+  MarkdonePriorityA     DiagnosticError    `(A)` priority marker
+  MarkdonePriorityB     DiagnosticWarn     `(B)` priority marker
+  MarkdonePriorityC     DiagnosticInfo     `(C)` / no marker
+  MarkdonePriorityD     DiagnosticHint     `(D)` priority marker
+  MarkdoneTag           Special            `+tag` tokens
+  MarkdoneResp          Type               `@responsible` tokens
+  MarkdoneDue           Number             `~date` — future or undated
+  MarkdoneDueToday      DiagnosticWarn     `~date` — due today
+  MarkdoneDueTomorrow   DiagnosticHint     `~date` — due tomorrow
+  MarkdoneDueOverdue    DiagnosticError    `~date` — past due
+
+Highlights are applied in three surfaces: the quickfix window, the Snacks
+picker, and normal markdown buffers. Markdown buffer highlights are refreshed
+automatically on `BufWritePost`.
+
+==============================================================================
+7. KEYMAPS                                                 *markdone-keymaps*
+
+No keymaps are defined by default. Add your own in your config, for example:
+>lua
+  vim.keymap.set("n", "<leader>to",
+      "<cmd>Todo open sort:prio picker<cr>",
+      { desc = "Todo: open tasks" })
+  vim.keymap.set("n", "<leader>ta",
+      "<cmd>Todo all sort:prio picker<cr>",
+      { desc = "Todo: all tasks" })
+  vim.keymap.set("n", "<leader>td",
+      "<cmd>Todo done picker<cr>",
+      { desc = "Todo: done tasks" })
+<
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:

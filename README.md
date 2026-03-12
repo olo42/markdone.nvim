@@ -163,15 +163,19 @@ picker, and normal markdown buffers (refreshed on `BufWritePost`).
 ## Architecture
 
 ```
-lua/markdone/
-├── init.lua        -- public entry point: require("markdone").setup()
-├── commands.lua    -- :Todo command registration and argument parsing
-├── search.lua      -- ripgrep integration
-├── parse.lua       -- parses a raw todo line into structured fields
-├── filter.lua      -- tag / responsible / due date filter functions
-├── sort.lua        -- priority and due date sort functions
-├── picker.lua      -- Snacks picker integration (optional)
-└── highlights.lua  -- highlight group definitions and application
+markdone.nvim/
+├── lua/
+│   └── markdone/
+│       ├── init.lua        -- public entry point: require("markdone").setup()
+│       ├── commands.lua    -- :Todo command registration and argument parsing
+│       ├── search.lua      -- ripgrep integration
+│       ├── parse.lua       -- parses a raw todo line into structured fields
+│       ├── filter.lua      -- tag / responsible / due date filter functions
+│       ├── sort.lua        -- priority and due date sort functions
+│       ├── picker.lua      -- Snacks picker integration (optional)
+│       └── highlights.lua  -- highlight group definitions and application
+├── README.md
+└── LICENSE
 ```
 
 ## Keymaps
